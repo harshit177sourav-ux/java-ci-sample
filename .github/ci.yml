@@ -1,67 +1,30 @@
-name: Java CI with Maven (Separate Test Steps)
+name: build
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
 
 jobs:
-  build-test:
-    name: Build, Unit Test & Integration Test
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
-          distribution: "temurin"
-          cache: maven
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Build (Compile only)
-        run: mvn -B clean compile
+      - name: Build Project (Skip Tests)
+        run: mvn -B clean install -DskipTests
 
-      # ------------------------------
-      #  UNIT TESTS - EACH TEST SEPARATE STEP
-      # ------------------------------
-      - name: Run HelloControllerTest
-        run: mvn -Dtest=HelloControllerTest test
+      - name: Run Unit Tests
+        run: mvn -B test -Dtest=*Test
 
-      - name: Run AnotherUnitTest
-        run: mvn -Dtest=AnotherUnitTest test
-        if: always()     # ensures this runs even if the previous test fails
-
-      # ------------------------------
-      # INTEGRATION TESTS - EACH TEST SEPARATE STEP
-      # ------------------------------
-      - name: Run IntegrationTest
-        run: mvn -Dtest=IntegrationTest verify
-
-      - name: Run AnotherIntegrationIT
-        run: mvn -Dtest=AnotherIntegrationIT verify
-        if: always()
-
-      # ------------------------------
-      # REPORTS (Artifacts)
-      # ------------------------------
-      - name: Upload Surefire Test Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-reports
-          path: target/surefire-reports
-
-      - name: Upload Failsafe Integration Test Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-reports
-          path: target/failsafe-reports
-
-      - name: Upload Code Coverage (Jacoco)
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: target/site/jacoco/
+      - name: Run Integration Tests
+        run: mvn -B verify -DskipUnitTests=true
