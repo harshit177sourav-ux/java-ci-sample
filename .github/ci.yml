@@ -1,24 +1,67 @@
-name: Java CI with Maven
+name: Java CI with Maven (Separate Test Steps)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build:
+  build-test:
+    name: Build, Unit Test & Integration Test
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
           cache: maven
 
-      - name: Build + Run Unit + Integration Tests
-        run: mvn -B clean verify
+      - name: Build (Compile only)
+        run: mvn -B clean compile
+
+      # ------------------------------
+      #  UNIT TESTS - EACH TEST SEPARATE STEP
+      # ------------------------------
+      - name: Run HelloControllerTest
+        run: mvn -Dtest=HelloControllerTest test
+
+      - name: Run AnotherUnitTest
+        run: mvn -Dtest=AnotherUnitTest test
+        if: always()     # ensures this runs even if the previous test fails
+
+      # ------------------------------
+      # INTEGRATION TESTS - EACH TEST SEPARATE STEP
+      # ------------------------------
+      - name: Run IntegrationTest
+        run: mvn -Dtest=IntegrationTest verify
+
+      - name: Run AnotherIntegrationIT
+        run: mvn -Dtest=AnotherIntegrationIT verify
+        if: always()
+
+      # ------------------------------
+      # REPORTS (Artifacts)
+      # ------------------------------
+      - name: Upload Surefire Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: target/surefire-reports
+
+      - name: Upload Failsafe Integration Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: target/failsafe-reports
+
+      - name: Upload Code Coverage (Jacoco)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
